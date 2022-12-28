@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import Filter from './components/Filter'
 import PersonForm from './components/PersonForm'
 import Persons from './components/Persons'
-import axios from 'axios'
+import personService from './services/persons'
 
 const App = () => {
   const [persons, setPersons] = useState([])
@@ -10,18 +10,36 @@ const App = () => {
   const [filter, setFilter] = useState("")
 
   useEffect(() => {
-    axios
-      .get("http://localhost:3001/persons")
-      .then(response => {
-        setPersons(response.data)
-      })
+    personService
+      .getAll()
+      .then(response => setPersons(response))
   },[])
 
   const addPerson = (event) => {
     event.preventDefault()
     let nameArr = persons.map(person => person.name)
-    if(nameArr.includes(newName.name)) alert(`${newName.name} is already added to the phonebook`)
-    else setPersons(persons.concat({name: newName.name, number: newName.number}))
+    let cur = persons.filter(person => person.name === newName.name)
+    if(nameArr.includes(newName.name) && window.confirm(`${newName.name} is already added to the phonebook, replace the old number with a new one?`)){
+      personService
+        .update(cur[0].id, newName)
+        .then(response => {
+          let updated = persons.map(person => person.id !== response.id ? person : response)
+          setPersons(updated)
+        })
+    } 
+    else {
+      personService
+        .create(newName)
+        .then(response => setPersons(persons.concat(response)))
+    }
+  }
+
+  const deletePerson = (id, name) => {
+    if(window.confirm(`Delete ${name}`)){
+      personService
+        .remove(id)
+        .then(response => setPersons(persons.filter(person => person.id !== id)))
+    }
   }
 
   const handleNameChange = (event) => {
@@ -52,7 +70,7 @@ const App = () => {
         numberHandler={handleNumberChange}
       />
       <h3>Numbers</h3>  
-      <Persons peopleToShow={peopleToShow}/>
+      <Persons peopleToShow={peopleToShow} deletePerson={deletePerson}/>
     </div>
   )
 }
