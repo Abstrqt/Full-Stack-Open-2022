@@ -1,13 +1,15 @@
 const express = require("express")
 const morgan = require("morgan")
+const cors = require("cors")
 const app = express()
-const PORT = 3001
+const PORT = process.env.PORT || 3001
 const RANGE = 5000
 
 app.use(express.json())
-
+app.use(cors())
+app.use(express.static("build"))
 morgan.token("data", request => {
-    return request.method === "POST" ? JSON.stringify(request.body) : " "
+    return request.method === "POST" || request.method === "PUT" ? JSON.stringify(request.body) : " "
 })
 app.use(morgan(":method :url :status :res[content-length] - :response-time ms :data"))
 
@@ -56,7 +58,7 @@ app.delete("/api/persons/:id", (request, response) => {
     let id = Number(request.params.id)
     notes = notes.filter(note => note.id !== id)
     // console.log(notes)
-    response.status(204)
+    response.status(204).end()
 })
 
 app.post("/api/persons", (request, response) => {
@@ -67,7 +69,19 @@ app.post("/api/persons", (request, response) => {
     let note = {id: generateID(), ...body}
     // console.log(note)
     notes = notes.concat(note)
-    response.json(notes)
+    response.json(note)
+})
+
+app.put("/api/persons/:id", (request, response) => {
+    let body = request.body
+    let id = Number(request.params.id)
+    if(!body.number) return response.status(400).json({error: "number missing"})
+    let note = notes.find(note => note.id === id)
+    note = {...note, number: body.number}
+    // console.log(note)
+    notes = notes.filter(note => note.id !== id)
+    notes = notes.concat(note)
+    response.json(note)
 })
 
 app.get("/info", (request, response) => {
